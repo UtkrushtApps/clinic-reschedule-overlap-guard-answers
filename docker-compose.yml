@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: careslot-postgres
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: careslot
+      POSTGRES_PASSWORD: careslot_pw
+      POSTGRES_DB: careslot
+    volumes:
+      - careslot_pgdata:/var/lib/postgresql/data
+      - /root/task/init_database.sql:/docker-entrypoint-initdb.d/init_database.sql
+    networks:
+      - careslot_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U careslot -d careslot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: /root/task
+      dockerfile: Dockerfile
+    container_name: careslot-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - careslot_net
+
+networks:
+  careslot_net:
+    driver: bridge
+
+volumes:
+  careslot_pgdata:
